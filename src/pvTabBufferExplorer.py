@@ -53,12 +53,9 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
 
         # init the buffer info
         self.__buffer.dataModel.removeAll()
-        buffer_format = '{%(bufferid)3d}%(buffername)s'
+        buffer_format = ' %(buffername)s[%(bufferid)2d] '
 
         for buffer in vim.buffers :
-            #  buffer exist
-            #if vim.eval("bufexists(%d)" % ( buffer.number , ) ) != '0' :
-
             # get properties
             ## buffer id
             buffer_id = buffer.number
@@ -90,7 +87,7 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
     def OnSelectTabChanged( self , element ):
         _logger.debug('TabbedBufferExplorer::OnSelectTabChanged()')
         try :
-            buffer_id = int( re.match('^{(?P<id>\s*\d+)}.*$' , element.name.MultibyteString ).group('id') )
+            buffer_id = int( re.match('^ .*\[(?P<id>\s*\d+)] $' , element.name.MultibyteString ).group('id') )
         except:
             # not find valid buffer id, just do nothing
             return
@@ -115,8 +112,8 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
 
 
     def OnProcessEvent( self , event ):
-        if event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'f5' :
-            self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , nofity = false ) 
+        if event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == '<f5>' :
+            self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , notify = False ) 
 
         elif event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'dd':
             # one buffer , can't delete it
@@ -152,7 +149,7 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
 
             self.__buffer.updateBuffer( selection = after_selection , notify = False )
 
-        elif event.type == PV_EVENT_TYPE_AUTOCMD and  ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or     ( event.autocmd_name == 'bufdelete' ) ): 
+        elif event.type == PV_EVENT_TYPE_AUTOCMD and  ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or ( event.autocmd_name == 'bufdelete' ) ): 
             self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , notify = False )
         else:
             super( pvTabBufferExplorer , self ).OnProcessEvent( event )
