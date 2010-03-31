@@ -17,7 +17,7 @@ from pyvim.pvEvent import pvKeymapEvent , pvEventObserver , PV_KM_MODE_NORMAL
 from pyvim.pvEvent import pvAutocmdEvent 
 from pyvim.pvEvent import PV_EVENT_TYPE_KEYMAP , PV_EVENT_TYPE_AUTOCMD
 # data model
-from pyvim.pvDataModel import pvDataElement, PV_ELEMENT_TYPE_LEEF
+from pyvim.pvDataModel import pvDataElement, PV_ELEMENT_TYPE_LEEF , PV_ELEMENT_TYPE_ROOT
 
 
 
@@ -45,46 +45,51 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
         # destroy buffer
         self.__buffer.wipeout()
 
-    def analyzeBufferInfo( self ):
+    def updateDataModel( self ):
         _logger.debug('TabbedBufferExplorer::analyzeBufferInfo()')
         # get main window buffer
-        buf_no = self.__target_win.bufferid
-        update_selection = 0
+        current_show_buffer_no = self.__target_win.bufferid
 
         # init the buffer info
         self.__buffer.dataModel.removeAll()
         buffer_format = ' %(buffername)s[%(bufferid)2d] '
 
         for buffer in vim.buffers :
-            # get properties
             ## buffer id
             buffer_id = buffer.number
             ## buffer_name
-            buffer_basename = os.path.basename( buffer.name if buffer.name else "<NO NAME>" )
+            buffer_basename = os.path.basename( buffer.name ) if buffer.name else "<NO NAME>" 
             ## internal status
             is_listed = vim.eval('getbufvar(%d,"&buflisted")' % buffer_id ) != '0'
-            is_modifiable = vim.eval('getbufvar(%d,"&modifiable")' % buffer_id ) != '0'
-            is_readonly = vim.eval('getbufvar(%d,"&readonly")' % buffer_id ) != '0'
-            is_modified = vim.eval('getbufvar(%d,"&modified")' % buffer_id ) != '0'
+            #is_modifiable = vim.eval('getbufvar(%d,"&modifiable")' % buffer_id ) != '0'
+            #is_readonly = vim.eval('getbufvar(%d,"&readonly")' % buffer_id ) != '0'
+            #is_modified = vim.eval('getbufvar(%d,"&modified")' % buffer_id ) != '0'
+            if not is_listed:
+                continue
 
-            if is_listed :
-                if buffer_id == buf_no :
-                    update_selection = len ( self.__buffer.dataModel.root )
-                name = pvString( MultibyteString = buffer_format % {
-                        'bufferid' : buffer_id ,
-                        'buffername' : buffer_basename } )
-                self.__buffer.dataModel.addElement( pvDataElement.CreateElement( PV_ELEMENT_TYPE_LEEF , name ) )
+            name = pvString( MultibyteString = buffer_format % {
+                    'bufferid' : buffer_id ,
+                    'buffername' : buffer_basename } )
+            new_element = pvDataElement.CreateElement( PV_ELEMENT_TYPE_LEEF , name ) 
+            self.__buffer.dataModel.addElement( new_element )
+            if buffer_id == current_show_buffer_no:
+                self.__buffer.dataModel.selectedElement = new_element
 
-        return update_selection
-    
+
+
     def showBuffer( self , show_win ):
         _logger.debug('TabbedBufferExplorer::show()')
         self.__buffer.showBuffer( show_win )
-        self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , notify = False )
+        self.__buffer.updateBuffer()
         self.__target_win.setFocus()
 
 
-    def OnSelectTabChanged( self , element ):
+    def OnTabSelect( self , element ):
+        # first open
+        if element.type == PV_ELEMENT_TYPE_ROOT:
+            self.updateDataModel()
+            return
+
         _logger.debug('TabbedBufferExplorer::OnSelectTabChanged()')
         try :
             buffer_id = int( re.match('^ .*\[(?P<id>\s*\d+)] $' , element.name.MultibyteString ).group('id') )
@@ -113,46 +118,61 @@ class TabBufferExplorer( pvTabBufferObserver , pvEventObserver ):
 
     def OnProcessEvent( self , event ):
         if event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == '<f5>' :
-            self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , notify = False ) 
+            self.updateDataModel()
+            self.__buffer.updateBuffer()
 
         elif event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'dd':
-            # one buffer , can't delete it
-            if len ( self.__buffer.dataModel.root ) == 1: return
+            # one buffer , can't delete it, ignore the event
+            if self.__buffer.dataModel.root.count() == 1: return
             # check if select a valid item
-            current_item_index = self.__buffer.searchIndexByCursor()
-            if current_item_index == -1 : return
-            current_item = self.__buffer.dataModel.root.childNodes[ current_item_index ]
+            current_element = self.__buffer.getElementUnderCursor()
+            if current_element == None : return
 
             # if delete the current selected one , just move down on item
-            if current_item_index == self.__buffer.selection :
-                self.__buffer.updateBuffer( selection = self.__buffer.selection + 1 )
+            if current_element == self.__buffer.dataModel.selectedElement:
+                next_element = current_element.nextSibling
+                if next_element == None :
+                    next_element = self.__buffer.dataModel.root.childNodes[0]
+                self.__buffer.dataModel.selectedElement = next_element
 
+                try :
+                    move_buffer_id = int( 
+                            re.match(
+                                '^ .*\[(?P<id>\s*\d+)] $' , 
+                                next_element.name.MultibyteString ).group('id') )
+                except:
+                    # not find valid buffer id, just do nothing
+                    return
 
-            # if delete , move the selection
-            if self.__buffer.selection > current_item_index :
-                after_selection = self.__buffer.selection - 1
-            else:
-                after_selection = self.__buffer.selection
+                # display the next buffer
+                move_buffer = pvBuffer( PV_BUF_TYPE_ATTACH )
+                move_buffer.attach( move_buffer_id )
+                move_buffer.showBuffer( self.__target_win )
+                self.__buffer.updateBuffer()
 
             # analyze the buffer id
             try :
-                buffer_id = int ( re.match('^{(?P<id>\s*\d+)}.*$' , current_item.name.MultibyteString ).group('id') )
+                delete_buffer_id = int ( 
+                        re.match(
+                            '^ .*\[(?P<id>\s*\d+)] $' , 
+                            current_element.name.MultibyteString ).group('id') )
             except:
                 return
 
             # delete buffer
             delete_buffer = pvBuffer( PV_BUF_TYPE_ATTACH )
-            delete_buffer.attach( buffer_id )
+            delete_buffer.attach( delete_buffer_id )
             delete_buffer.wipeout()
             # delete list item
-            self.__buffer.dataModel.removeByElement( current_item )
+            self.updateDataModel()
+            self.__buffer.updateBuffer()
 
-            self.__buffer.updateBuffer( selection = after_selection , notify = False )
 
-        elif event.type == PV_EVENT_TYPE_AUTOCMD and  ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or ( event.autocmd_name == 'bufdelete' ) ): 
-            self.__buffer.updateBuffer( selection = self.analyzeBufferInfo() , notify = False )
-        else:
-            super( pvTabBufferExplorer , self ).OnProcessEvent( event )
+        elif event.type == PV_EVENT_TYPE_AUTOCMD and  \
+                ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or \
+                ( event.autocmd_name == 'bufdelete' ) ): 
+                    self.updateDataModel()
+                    self.__buffer.updateBuffer()
 
 class Application( pvEventObserver ):
     def __init__( self ):
@@ -161,19 +181,24 @@ class Application( pvEventObserver ):
         self.event = pvKeymapEvent( '<m-1>' , PV_KM_MODE_NORMAL  )
         
     def OnProcessEvent( self , event ):
-        if self.buffer is None and self.window is None :
-            current_window = pvWindow()
-            from pyvim.pvBase import pvWinSplitter , PV_SPLIT_TYPE_CUR_BOTTOM
-            self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_BOTTOM , ( -1 , 1 ) , current_window ).doSplit()
-            self.buffer = TabBufferExplorer( current_window )
-            self.buffer.showBuffer( self.window )
-        else:
-            if self.window:
-                self.window.closeWindow()
-                self.window = None
-            if self.buffer:
-                self.buffer.destroy()
-                self.buffer = None
+        try :
+            if self.buffer is None and self.window is None :
+                current_window = pvWindow()
+                from pyvim.pvBase import pvWinSplitter , PV_SPLIT_TYPE_CUR_BOTTOM
+                self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_BOTTOM , ( -1 , 1 ) , current_window ).doSplit()
+                self.buffer = TabBufferExplorer( current_window )
+                self.buffer.showBuffer( self.window )
+            else:
+                if self.window:
+                    self.window.closeWindow()
+                    self.window = None
+                if self.buffer:
+                    self.buffer.destroy()
+                    self.buffer = None
+        except:
+            import sys
+            print sys.exc_info()
+            print sys.exc_info()[2].tb_frame.f_code
 
     def start( self ):
         self.event.registerObserver( self )
