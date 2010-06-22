@@ -33,7 +33,7 @@ class pvFileSystemModel( pvAbstractModel ):
             for x in string.ascii_uppercase :
                 driver_path = u'%s:\\' % x
                 if os.path.isdir( driver_path ):
-                    newIndex = self.createIndex( len( root.children ) , None )
+                    newIndex = self.createIndex( len( self.root.children ) , None )
                     # create new node
                     newNode = pvFileSystemNode()
                     newNode.index = newIndex
@@ -61,7 +61,9 @@ class pvFileSystemModel( pvAbstractModel ):
         return pnode.children[row].index
 
     def data( self , index , role = PV_MODEL_ROLE_DISPLAY ):
-        return os.path.basename( index.data.path )
+        basename = os.path.basename( index.data.path )
+        return pvString.fromUnicode( basename if basename else index.data.path )
+
 
     def hasChildren( self , index ):
         return os.path.isdir( index.data.path ) 
@@ -82,7 +84,7 @@ class pvFileExplorer( pvTreeBufferObserver ):
 
     def OnTreeNodeSelected( self , index ):
         path = index.data.path
-        if os.path.isdir( s ):
+        if os.path.isdir( path ):
             os.chdir( path )
         else:
             buffer = pvBuffer( PV_BUF_TYPE_NORMAL , path )
