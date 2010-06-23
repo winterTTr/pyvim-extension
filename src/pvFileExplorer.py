@@ -1,7 +1,10 @@
 import os
+import sys
+import types
 import os.path
 
-from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_NORMAL
+
+from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_NORMAL , PV_BUF_TYPE_ATTACH
 from pyvim.pvBase import pvWindow
 from pyvim.pvUtil import pvString
 
@@ -18,13 +21,17 @@ class pvFileSystemNode(object):
         self.path = u""
         self.children = []
 
-class pvFileSystemModel( pvAbstractModel ):
+    def __eq__( self , node ):
+        if type( node )!= pvFileSystemNode:
+            return False
+        return self.path == node.path
+
+class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
     def __init__(self):
         self.root = pvFileSystemNode()
         self.root.index = pvModelIndex()
 
     def rowCount( self ,  index ):
-        import sys
         if sys.platform[:3] == 'win' and ( not index.isValid() ):
             if len( self.root.children ):
                 return len( self.root.children )
@@ -60,21 +67,76 @@ class pvFileSystemModel( pvAbstractModel ):
         pnode = pindex.data if pindex.isValid() else self.root
         return pnode.children[row].index
 
+    def indexByPath( self , full_path ):
+        if full_path == "" or full_path is None: return
+
+        if type( full_path ) != types.UnicodeType:
+            full_path = pvString.fromVim( full_path ).unicode
+
+        path_list = []
+        phead , pend = os.path.split( full_path )
+        while pend :
+            path_list.insert( 0 , pend )
+            phead , pend = os.path.split( phead )
+        path_list.insert( 0 , phead )
+        if sys.platform[:3] == 'win':
+            path_list = map( lambda x : x.replace( '/' , '\\' ) , path_list )
+
+        plus_path = u""
+        node = self.root
+        while path_list :
+            plus_path = os.path.join( plus_path , path_list.pop(0) )
+            if self.rowCount( node.index ) == 0 :
+                return pvModelIndex()
+
+            try:
+                node = filter( lambda x : x.path == plus_path , node.children )[0]
+            except:
+                return pvModelIndex()
+
+        return node.index
+
+
+
+
     def data( self , index , role = PV_MODEL_ROLE_DISPLAY ):
         basename = os.path.basename( index.data.path )
         return pvString.fromUnicode( basename if basename else index.data.path )
 
 
+    def parent( self , index ):
+        if not index.isValid(): return pvModelIndex()
+
+        path = index.data.path
+        # TODO
+        
+
+
     def hasChildren( self , index ):
         return os.path.isdir( index.data.path ) 
+
+    def OnTreeNodeSelected( self  , index ):
+        pass
+
+    def OnTreeNodeExpanded( self  , index ):
+        pass
+
+    def OnTreeNodeCollapsed( self  , index ):
+        index.data.children = []
 
 
 class pvFileExplorer( pvTreeBufferObserver ):
     def __init__( self  , target_window ):
         self.__buffer = pvTreeBuffer( pvFileSystemModel() )
         self.__buffer.registerObserver( self )
+        self.__buffer.registerObserver( self.__buffer.model )
 
         self.__target_window = target_window
+
+        import sockpdb
+        sockpdb.set_trace()
+        index = self.__buffer.model.indexByPath( "D:/Download/ARS-048/ARS-048.avi.bt.td" )
+        self.__buffer.expandTo( index )
 
 
     def destroy( self ):
