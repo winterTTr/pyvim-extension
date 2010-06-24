@@ -106,11 +106,9 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
 
     def parent( self , index ):
         if not index.isValid(): return pvModelIndex()
-
         path = index.data.path
-        # TODO
-        
-
+        ppath = os.path.split( path )[0]
+        return self.root.index if path == ppath else self.indexByPath( ppath )
 
     def hasChildren( self , index ):
         return os.path.isdir( index.data.path ) 
@@ -133,9 +131,9 @@ class pvFileExplorer( pvTreeBufferObserver ):
 
         self.__target_window = target_window
 
-        import sockpdb
-        sockpdb.set_trace()
-        index = self.__buffer.model.indexByPath( "D:/Download/ARS-048/ARS-048.avi.bt.td" )
+        #import sockpdb
+        #sockpdb.set_trace()
+        index = self.__buffer.model.indexByPath( "D:/Documents/format.txt" )
         self.__buffer.expandTo( index )
 
 
