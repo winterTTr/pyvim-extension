@@ -68,7 +68,7 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
         return pnode.children[row].index
 
     def indexByPath( self , full_path ):
-        if full_path == "" or full_path is None: return
+        if full_path == "" or full_path is None: return pvModelIndex()
 
         if type( full_path ) != types.UnicodeType:
             full_path = pvString.fromVim( full_path ).unicode
@@ -133,8 +133,13 @@ class pvFileExplorer( pvTreeBufferObserver ):
 
         #import sockpdb
         #sockpdb.set_trace()
-        index = self.__buffer.model.indexByPath( "D:/Documents/format.txt" )
+
+        bufferid = target_window.bufferid
+        tmpBuf = pvBuffer( PV_BUF_TYPE_ATTACH )
+        tmpBuf.attach( bufferid )
+        index = self.__buffer.model.indexByPath( tmpBuf.name )
         self.__buffer.expandTo( index )
+        tmpBuf.detach()
 
 
     def destroy( self ):
