@@ -1,4 +1,3 @@
-import sockpdb
 import vim
 import os
 import re
@@ -111,9 +110,8 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
     def showBuffer( self , show_win ):
         _logger.debug('TabbedBufferExplorer::show()')
         self.__buffer.showBuffer( show_win )
-        
-        self.__buffer.updateBuffer()
         self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
+        self.__buffer.updateBuffer()
         self.__target_win.setFocus()
 
 
@@ -135,15 +133,20 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
 
         elif event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'dd':
             # one buffer , can't delete it, ignore the event
-            if self.__buffer.model.rowCount() == 1 : return
+            if self.__buffer.model.rowCount( pvModelIndex() ) == 1 : return
 
-            index = self.__buffer.model.indexAtCursor( vim.current.window.cursor )
+            index = self.__buffer.indexAtCursor( vim.current.window.cursor )
             if not index.isValid() : return 
-            nindex = self.__buffer.model.index( index.row , pvModelIndex() )
-            if not nindex.isValid():
-                nindex = self.__buffer.model.index( 0 , pvModelIndex() )
 
-            self.__buffer.selection = nindex
+            if index == self.__buffer.selection:
+                nindex = self.__buffer.model.index( index.row + 1 , pvModelIndex() )
+                if not nindex.isValid():
+                    nindex = self.__buffer.model.index( 0 , pvModelIndex() )
+                self.__buffer.selection = nindex
+                # show the buffer on main panel
+                show_buffer = pvBuffer( PV_BUF_TYPE_ATTACH )
+                show_buffer.attach( nindex.data )
+                show_buffer.showBuffer( self.__target_win )
 
             # delete buffer
             delete_buffer = pvBuffer( PV_BUF_TYPE_ATTACH )
@@ -155,8 +158,8 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
         elif event.type == PV_EVENT_TYPE_AUTOCMD and  \
                 ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or \
                 ( event.autocmd_name == 'bufdelete' ) ):
-            self.__buffer.updateBuffer()
             self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
+            self.__buffer.updateBuffer()
 
 class Application( pvEventObserver ):
     def __init__( self ):
