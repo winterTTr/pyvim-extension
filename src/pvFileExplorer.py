@@ -155,6 +155,7 @@ class pvFileExplorer( pvTreeBufferObserver ):
             buffer = pvBuffer( PV_BUF_TYPE_NORMAL , path )
             buffer.showBuffer( self.__target_window )
             buffer.detach()
+            self.__target_window.setFocus()
 
     def OnTreeNodeExpanded( self ,index ):
         pass
