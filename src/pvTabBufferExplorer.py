@@ -10,7 +10,8 @@ _logger = logging.getLogger('pve.pvTabBufferExplorer')
 from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_ATTACH
 from pyvim.pvBase import pvWindow
 # tab buffer
-from pyvim.pvLinear import pvLinearBuffer , pvLinearBufferObserver , PV_LINEARBUF_TYPE_HORIZONTAL
+from pyvim.pvLinear import pvLinearBuffer , pvLinearBufferObserver 
+from pyvim.pvLinear import PV_LINEARBUF_TYPE_HORIZONTAL , PV_LINEARBUF_TYPE_VERTICAL
 from pyvim.pvUtil import pvString
 # for event
 from pyvim.pvEvent import pvEventObserver 
@@ -87,7 +88,7 @@ class pvBufferInfoModel( pvAbstractModel ):
 class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
     def __init__( self , target_win ):
         self.__target_win = target_win
-        self.__buffer = pvLinearBuffer( pvBufferInfoModel() , PV_LINEARBUF_TYPE_HORIZONTAL )
+        self.__buffer = pvLinearBuffer( pvBufferInfoModel() , PV_LINEARBUF_TYPE_VERTICAL )
         self.__buffer.registerObserver( self )
 
         self.__event = []
@@ -132,6 +133,8 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
             self.__buffer.updateBuffer()
 
         elif event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'dd':
+            import sockpdb
+            sockpdb.set_trace()
             # one buffer , can't delete it, ignore the event
             if self.__buffer.model.rowCount( pvModelIndex() ) == 1 : return
 
@@ -158,6 +161,8 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
         elif event.type == PV_EVENT_TYPE_AUTOCMD and  \
                 ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or \
                 ( event.autocmd_name == 'bufdelete' ) ):
+            import sockpdb
+            sockpdb.set_trace()
             self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
             self.__buffer.updateBuffer()
 
@@ -170,8 +175,8 @@ class Application( pvEventObserver ):
     def OnProcessEvent( self , event ):
         if self.buffer is None and self.window is None :
             current_window = pvWindow()
-            from pyvim.pvBase import pvWinSplitter , PV_SPLIT_TYPE_CUR_BOTTOM
-            self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_BOTTOM , ( -1 , 1 ) , current_window ).doSplit()
+            from pyvim.pvBase import pvWinSplitter , PV_SPLIT_TYPE_CUR_BOTTOM , PV_SPLIT_TYPE_CUR_LEFT
+            self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_LEFT , ( 30 , -1 ) , current_window ).doSplit()
             self.buffer = TabBufferExplorer( current_window )
             self.buffer.showBuffer( self.window )
         else:
