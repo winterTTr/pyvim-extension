@@ -86,9 +86,9 @@ class pvBufferInfoModel( pvAbstractModel ):
 
 
 class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
-    def __init__( self , target_win ):
+    def __init__( self , direction , target_win ):
         self.__target_win = target_win
-        self.__buffer = pvLinearBuffer( pvBufferInfoModel() , PV_LINEARBUF_TYPE_VERTICAL )
+        self.__buffer = pvLinearBuffer( pvBufferInfoModel() , direction  )
         self.__buffer.registerObserver( self )
 
         self.__event = []
@@ -133,8 +133,6 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
             self.__buffer.updateBuffer()
 
         elif event.type == PV_EVENT_TYPE_KEYMAP and event.key_name == 'dd':
-            import sockpdb
-            sockpdb.set_trace()
             # one buffer , can't delete it, ignore the event
             if self.__buffer.model.rowCount( pvModelIndex() ) == 1 : return
 
@@ -145,7 +143,6 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
                 nindex = self.__buffer.model.index( index.row + 1 , pvModelIndex() )
                 if not nindex.isValid():
                     nindex = self.__buffer.model.index( 0 , pvModelIndex() )
-                self.__buffer.selection = nindex
                 # show the buffer on main panel
                 show_buffer = pvBuffer( PV_BUF_TYPE_ATTACH )
                 show_buffer.attach( nindex.data )
@@ -156,28 +153,31 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
             delete_buffer.attach( index.data )
             delete_buffer.wipeout()
             # delete list item
+            self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
             self.__buffer.updateBuffer()
 
         elif event.type == PV_EVENT_TYPE_AUTOCMD and  \
                 ( ( event.autocmd_name == 'bufenter' and self.__target_win == pvWindow() ) or \
                 ( event.autocmd_name == 'bufdelete' ) ):
-            import sockpdb
-            sockpdb.set_trace()
             self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
             self.__buffer.updateBuffer()
 
 class Application( pvEventObserver ):
-    def __init__( self ):
+    def __init__( self , direction = PV_LINEARBUF_TYPE_HORIZONTAL ):
         self.buffer = None
         self.window = None
         self.event = pvKeymapEvent( '<m-1>' , PV_KM_MODE_NORMAL  )
+        self.direction = direction
         
     def OnProcessEvent( self , event ):
         if self.buffer is None and self.window is None :
             current_window = pvWindow()
             from pyvim.pvBase import pvWinSplitter , PV_SPLIT_TYPE_CUR_BOTTOM , PV_SPLIT_TYPE_CUR_LEFT
-            self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_LEFT , ( 30 , -1 ) , current_window ).doSplit()
-            self.buffer = TabBufferExplorer( current_window )
+            if self.direction == PV_LINEARBUF_TYPE_HORIZONTAL:
+                self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_BOTTOM , ( -1 , 1 ) , current_window ).doSplit()
+            else:
+                self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_LEFT , ( 30 , -1 ) , current_window ).doSplit()
+            self.buffer = TabBufferExplorer( self.direction , current_window )
             self.buffer.showBuffer( self.window )
         else:
             if self.window:
