@@ -54,15 +54,15 @@ class Application( pvEventObserver ):
 
     def constructAndShow( self ):
         current_window = pvWindow()
-        self.bexp_window = pvWinSplitter( 
+        self.fexp_window = pvWinSplitter( 
                 PV_SPLIT_TYPE_MOST_LEFT if self.side == PV_EP_LEFT else PV_SPLIT_TYPE_MOST_RIGHT, 
                 ( 35 , -1 ) , 
                 current_window ).doSplit()
 
-        self.fexp_window = pvWinSplitter(
+        self.bexp_window = pvWinSplitter(
                 PV_SPLIT_TYPE_CUR_BOTTOM , 
-                ( -1 , 30 ) , 
-                self.bexp_window ).doSplit()
+                ( -1 , 10 ) , 
+                self.fexp_window ).doSplit()
 
         from pyvim.pvLinear import PV_LINEARBUF_TYPE_VERTICAL
         self.bexp_buffer = pvBufferExplorer( PV_LINEARBUF_TYPE_VERTICAL , current_window )
