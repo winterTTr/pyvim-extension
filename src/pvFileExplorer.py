@@ -18,7 +18,7 @@ class pvFileSystemNode(object):
     def __init__( self ):
         self.index = None
 
-        self.path = u""
+        self.path = u"/"
         self.children = []
 
     def __eq__( self , node ):
@@ -81,8 +81,15 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
         path_list.insert( 0 , phead )
         if sys.platform[:3] == 'win':
             path_list = map( lambda x : x.replace( '/' , '\\' ) , path_list )
+        else:
+            if path_list :
+                path_list.pop(0)
 
-        plus_path = u""
+
+        if sys.platform[:3] == 'win':
+            plus_path = u""
+        else:
+            plus_path = u"/"
         node = self.root
         while path_list :
             plus_path = os.path.join( plus_path , path_list.pop(0) )
