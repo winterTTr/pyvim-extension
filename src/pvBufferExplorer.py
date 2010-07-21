@@ -4,7 +4,7 @@ import re
 
 # for log
 import logging
-_logger = logging.getLogger('pve.pvTabBufferExplorer')
+_logger = logging.getLogger('pve.pvBufferExplorer')
 
 # basic buffer
 from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_ATTACH
@@ -85,7 +85,7 @@ class pvBufferInfoModel( pvAbstractModel ):
 
 
 
-class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
+class pvBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
     def __init__( self , direction , target_win ):
         self.__target_win = target_win
         self.__buffer = pvLinearBuffer( pvBufferInfoModel() , direction  )
@@ -94,8 +94,8 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
         self.__event = []
         self.__event.append( pvKeymapEvent( "<F5>" , PV_KM_MODE_NORMAL , self.__buffer ) )
         self.__event.append( pvKeymapEvent( "dd"   , PV_KM_MODE_NORMAL , self.__buffer ) )
-        self.__event.append( pvAutocmdEvent( 'pvTabBufferExplorer' ,  'BufEnter' , '*' ) )
-        self.__event.append( pvAutocmdEvent( 'pvTabBufferExplorer' ,  'BufDelete' , '*') )
+        self.__event.append( pvAutocmdEvent( 'pvBufferExplorer' ,  'BufEnter' , '*' ) )
+        self.__event.append( pvAutocmdEvent( 'pvBufferExplorer' ,  'BufDelete' , '*') )
 
         #register event
         for event in self.__event: event.registerObserver( self )
@@ -109,7 +109,6 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
         self.__buffer.wipeout()
 
     def showBuffer( self , show_win ):
-        _logger.debug('TabbedBufferExplorer::show()')
         self.__buffer.showBuffer( show_win )
         self.__buffer.selection = self.__buffer.model.indexById( self.__target_win.bufferid )
         self.__buffer.updateBuffer()
@@ -163,10 +162,10 @@ class TabBufferExplorer( pvLinearBufferObserver , pvEventObserver ):
             self.__buffer.updateBuffer()
 
 class Application( pvEventObserver ):
-    def __init__( self , direction = PV_LINEARBUF_TYPE_HORIZONTAL ):
+    def __init__( self , hotkey , direction = PV_LINEARBUF_TYPE_HORIZONTAL ):
         self.buffer = None
         self.window = None
-        self.event = pvKeymapEvent( '<m-1>' , PV_KM_MODE_NORMAL  )
+        self.event = pvKeymapEvent( hotkey , PV_KM_MODE_NORMAL  )
         self.direction = direction
         
     def OnProcessEvent( self , event ):
@@ -177,7 +176,7 @@ class Application( pvEventObserver ):
                 self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_BOTTOM , ( -1 , 1 ) , current_window ).doSplit()
             else:
                 self.window = pvWinSplitter( PV_SPLIT_TYPE_CUR_LEFT , ( 30 , -1 ) , current_window ).doSplit()
-            self.buffer = TabBufferExplorer( self.direction , current_window )
+            self.buffer = pvBufferExplorer( self.direction , current_window )
             self.buffer.showBuffer( self.window )
         else:
             if self.window:

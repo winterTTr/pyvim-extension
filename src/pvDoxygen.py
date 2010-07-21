@@ -103,7 +103,7 @@ class CPP(object):
         if reFunctionDict['return'] != "" and reFunctionDict['return'] != 'void':
             insertContent.append( " * \\return    :add return:" )
 
-        insertContent.append( " * @sa       :add seealso:" )
+        insertContent.append( " * \\sa       :add seealso:" )
         insertContent.append( " *")
         insertContent.append( " * :add detail:" )
         insertContent.append( " */")
@@ -143,9 +143,6 @@ class CPP(object):
             (?P<name>\w+)
             $
             """ , re.VERBOSE )
-
-        import sockpdb
-        sockpdb.set_trace()
 
         offset = reClassDict['inherit'].find(":")
         if offset != -1:

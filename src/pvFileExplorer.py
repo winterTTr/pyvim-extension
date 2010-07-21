@@ -131,9 +131,6 @@ class pvFileExplorer( pvTreeBufferObserver ):
 
         self.__target_window = target_window
 
-        #import sockpdb
-        #sockpdb.set_trace()
-
         bufferid = target_window.bufferid
         tmpBuf = pvBuffer( PV_BUF_TYPE_ATTACH )
         tmpBuf.attach( bufferid )
@@ -169,10 +166,10 @@ class pvFileExplorer( pvTreeBufferObserver ):
         self.__target_window.setFocus()
 
 class Application( pvEventObserver ):
-    def __init__( self ):
+    def __init__( self , hotkey ):
         self.buffer = None
         self.window = None
-        self.event = pvKeymapEvent( '<m-2>' , PV_KM_MODE_NORMAL  )
+        self.event = pvKeymapEvent( hotkey , PV_KM_MODE_NORMAL  )
         
     def OnProcessEvent( self , event ):
         if self.buffer is None and self.window is None :
