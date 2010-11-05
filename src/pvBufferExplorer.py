@@ -1,6 +1,5 @@
 import vim
 import os
-import re
 
 # for log
 import logging
@@ -11,8 +10,7 @@ from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_ATTACH
 from pyvim.pvBase import pvWindow
 # tab buffer
 from pyvim.pvLinear import pvLinearBuffer , pvLinearBufferObserver 
-from pyvim.pvLinear import PV_LINEARBUF_TYPE_HORIZONTAL , PV_LINEARBUF_TYPE_VERTICAL
-from pyvim.pvUtil import pvString
+from pyvim.pvLinear import PV_LINEARBUF_TYPE_HORIZONTAL 
 # for event
 from pyvim.pvEvent import pvEventObserver 
 from pyvim.pvEvent import pvAutocmdEvent , pvKeymapEvent , PV_KM_MODE_NORMAL
@@ -67,10 +65,10 @@ class pvBufferInfoModel( pvAbstractModel ):
 
     def data( self , index , role = PV_MODEL_ROLE_DISPLAY ):
         if not index.isValid():
-            return pvString()
+            return ""
 
         item = filter( lambda x : x.index == index , self.__cache )[0]
-        return pvString.fromVim( item.name )
+        return  item.name 
 
     def indexById( self , buffer_id ):
         self.rowCount( pvModelIndex() )

@@ -2,8 +2,8 @@ from pyvim.pvEvent import pvKeymapEvent , PV_KM_MODE_NORMAL , pvEventObserver
 from pyvim.pvBase import pvWindow , pvWinSplitter 
 from pyvim.pvBase import PV_SPLIT_TYPE_MOST_LEFT , PV_SPLIT_TYPE_MOST_RIGHT , PV_SPLIT_TYPE_CUR_BOTTOM 
 
-from pvBufferExplorer import pvBufferExplorer
-from pvFileExplorer import pvFileExplorer
+from .pvBufferExplorer import pvBufferExplorer
+from .pvFileExplorer import pvFileExplorer
 
 
 
@@ -27,6 +27,10 @@ class Application( pvEventObserver ):
                 or self.fexp_window == None \
                 or ( not self.bexp_window.isShown() ) \
                 or ( not self.fexp_window.isShown() )
+
+
+        import sockpdb
+        sockpdb.set_trace()
 
         self.cleanup()
         if isNotStart :

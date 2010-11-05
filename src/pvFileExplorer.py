@@ -1,12 +1,10 @@
 import os
 import sys
 import types
-import os.path
 
 
 from pyvim.pvBase import pvBuffer , PV_BUF_TYPE_NORMAL , PV_BUF_TYPE_ATTACH
 from pyvim.pvBase import pvWindow
-from pyvim.pvUtil import pvString
 
 from pyvim.pvEvent import pvEventObserver , pvKeymapEvent , PV_KM_MODE_NORMAL
 
@@ -18,7 +16,7 @@ class pvFileSystemNode(object):
     def __init__( self ):
         self.index = None
 
-        self.path = u"/"
+        self.path = "/"
         self.children = []
 
     def __eq__( self , node ):
@@ -38,7 +36,7 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
 
             import string
             for x in string.ascii_uppercase :
-                driver_path = u'%s:\\' % x
+                driver_path = '%s:\\' % x
                 if os.path.isdir( driver_path ):
                     newIndex = self.createIndex( len( self.root.children ) , None )
                     # create new node
@@ -71,7 +69,7 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
         if full_path == "" or full_path is None: return pvModelIndex()
 
         if type( full_path ) != types.UnicodeType:
-            full_path = pvString.fromVim( full_path ).unicode
+            full_path = full_path
 
         path_list = []
         phead , pend = os.path.split( full_path )
@@ -87,9 +85,9 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
 
 
         if sys.platform[:3] == 'win':
-            plus_path = u""
+            plus_path = ""
         else:
-            plus_path = u"/"
+            plus_path = "/"
         node = self.root
         while path_list :
             plus_path = os.path.join( plus_path , path_list.pop(0) )
@@ -108,7 +106,7 @@ class pvFileSystemModel( pvAbstractModel , pvTreeBufferObserver ):
 
     def data( self , index , role = PV_MODEL_ROLE_DISPLAY ):
         basename = os.path.basename( index.data.path )
-        return pvString.fromUnicode( basename if basename else index.data.path )
+        return basename if basename else index.data.path 
 
 
     def parent( self , index ):
